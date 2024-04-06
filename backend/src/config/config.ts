@@ -1,9 +1,8 @@
 
 const config = {
-    ip: 'http://localhost:3000',
+    ip: 'https://dstruct.vocoprojektid.ee/',
     production: false,
-    user_accounts: true,
-    email: ''
+    user_accounts: true
 }
 
 export default config;

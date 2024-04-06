@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-    baseURL: 'http://localhost:5155/api',
-    withCredentials: true
+    baseURL: 'https://dstruct.vocoprojektid.ee/api',
+    withCredentials: true,
 });
 
 const axiosPlugin = {
