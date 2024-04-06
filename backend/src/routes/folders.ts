@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { Request, Response, Router } from 'express';
-import { RowDataPacket } from 'mysql2/promise';
+import {PoolConnection, RowDataPacket} from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 import config from '../config/config';
 import pool from '../config/database';
@@ -76,7 +76,7 @@ router.put('/folders', async (req: Request, res: Response) => {
 // TYPE: DELETE
 // REQUIREMENT: NONE
 // RETURN: RETURNS ALL FOLDERS FOR USER
-router.delete('/folder/:id', async (req: Request, res: Response) => {
+router.delete('/folders/:id', async (req: Request, res: Response) => {
     let connection;
     try {
         connection = await pool.getConnection();
@@ -112,41 +112,33 @@ router.delete('/folder/:id', async (req: Request, res: Response) => {
 
         // @note: all this works by assuming that the owner of the folder SHOULD own DELETE_PRIVILEGE for everything under the folder
 
-        const delete_folders_query = 'DELETE FROM folders WHERE ID = ?  OR _ID = ?';
-        const [deleted_folders] = await connection.query<RowDataPacket[]>(delete_folders_query, [folder_id, folder_id]);
-
-        // delete all folders, subfolders privileges for ids deleted
-        const folder_ids_to_delete = deleted_folders.map(row => row.ID);
-
-        // risky business
-        await connection.execute<RowDataPacket[]>('SET FOREIGN_KEY_CHECKS=0');
-
-        // loop our folders
-        for(const id of folder_ids_to_delete)
-        {
-            // delete privileges for the folder
-            const delete_privileges_query = 'DELETE FROM folder_privileges WHERE FOLDER_ID = ?';
-            await connection.query<RowDataPacket[]>(delete_privileges_query, [id]);
-
-            // find all documents for the folder
-            const delete_documents_query = 'DELETE FROM documents WHERE folder_id = ?';
-            const [deleted_documents] = await connection.query<RowDataPacket[]>(delete_documents_query, [id]);
-
-            // map documents
-            const document_ids_to_delete = deleted_documents.map(row => row.ID);
-
-            for(const doc_id of document_ids_to_delete)
-            {
-                // delete privileges
-                const delete_doc_privileges_query = 'DELETE FROM document_privileges WHERE DOCUMENT_ID = ?';
-                await connection.query<RowDataPacket[]>(delete_doc_privileges_query, [doc_id]);
+        // Recursive function to delete folders, documents, and their privileges
+        async function deleteFolderAndContents(folderId: string, connection: PoolConnection) {
+            console.log('Deleting folder with id ', folderId);
+            // Find all subfolders
+            const [subFolders] = await connection.query<RowDataPacket[]>('SELECT ID FROM folders WHERE _ID = ?', [folderId]);
+            for (const subFolder of subFolders) {
+                await deleteFolderAndContents(subFolder.ID, connection); // Recursively delete subfolders and their contents
             }
+
+            // Delete documents and their privileges within the current folder
+            const [documentsToDelete] = await connection.query<RowDataPacket[]>('SELECT ID FROM documents WHERE folder_id = ?', [folderId]);
+            for (const { ID: docId } of documentsToDelete) {
+                await connection.query('DELETE FROM document_privileges WHERE DOCUMENT_ID = ?', [docId]);
+                await connection.query('DELETE FROM documents WHERE ID = ?', [docId]);
+            }
+
+            // Delete folder privileges for the current folder
+            await connection.query('DELETE FROM folder_privileges WHERE FOLDER_ID = ?', [folderId]);
+
+            // Finally, delete the folder itself
+            await connection.query('DELETE FROM folders WHERE ID = ?', [folderId]);
         }
 
-        // safety
-        await connection.execute<RowDataPacket[]>('SET FOREIGN_KEY_CHECKS=1');
-    
-        return res.status(202).json({ message: 'Success.' });
+        // Start the recursive deletion from the requested folder
+        await deleteFolderAndContents(req.params.id, connection);
+
+        return res.status(200).json({ message: 'Success.' });
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });

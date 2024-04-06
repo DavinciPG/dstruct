@@ -17,8 +17,28 @@ router.get('/documents', async (req: Request, res: Response) => {
             return;
         }
 
-        const sql_query = 'SELECT d.ID, d.title as TITLE, d.document_type, d.metadata, d.owner_id AS OWNER_ID, dp.READ_PRIVILEEG FROM documents d LEFT JOIN document_privileges dp on dp.document_id = d.ID AND dp.user_id = ? WHERE d.FOLDER_ID IS NULL;';
-        const [rows] = await connection.query<RowDataPacket[]>(sql_query, [req.session.user.id]);
+        const user_id = req.session.user.id;
+        const sql_query = `
+            SELECT 
+                d.ID, 
+                d.title AS TITLE, 
+                d.document_type, 
+                d.metadata, 
+                d.owner_id AS OWNER_ID, 
+                d.folder_id,
+                dp.READ_PRIVILEEG 
+            FROM 
+                documents d 
+            LEFT JOIN 
+                document_privileges dp 
+            ON 
+                dp.document_id = d.ID 
+                AND dp.user_id = ?
+            WHERE 
+                 d.FOLDER_ID IS NULL 
+                 AND (d.owner_id = ? OR dp.READ_PRIVILEEG = 1);
+        `;
+        const [rows] = await connection.query<RowDataPacket[]>(sql_query, [user_id, user_id]);
 
         return res.status(202).json({ message: 'Success.', data: rows});
     } catch (error) {
@@ -43,8 +63,28 @@ router.get('/folders/:id/documents', async (req: Request, res: Response) => {
 
         const folder_id = req.params.id
 
-        const sql_query = 'SELECT d.ID, d.title, d.document_type, d.metadata, d.owner_id AS OWNER_ID, dp.READ_PRIVILEEG FROM documents d LEFT JOIN document_privileges dp on dp.document_id = d.ID AND dp.user_id = ? WHERE d.FOLDER_ID=?;';
-        const [rows] = await connection.query<RowDataPacket[]>(sql_query, [req.session.user.id, folder_id]);
+        const user_id = req.session.user.id;
+        const sql_query = `
+            SELECT 
+                d.ID, 
+                d.title AS TITLE, 
+                d.document_type, 
+                d.metadata, 
+                d.owner_id AS OWNER_ID, 
+                d.folder_id,
+                dp.READ_PRIVILEEG 
+            FROM 
+                documents d 
+            LEFT JOIN 
+                document_privileges dp 
+            ON 
+                dp.document_id = d.ID 
+                AND dp.user_id = ?
+            WHERE 
+                 d.FOLDER_ID = ? 
+                 AND (d.owner_id = ? OR dp.READ_PRIVILEEG = 1);
+        `;
+        const [rows] = await connection.query<RowDataPacket[]>(sql_query, [user_id, folder_id, user_id]);
 
         return res.status(202).json({ message: 'Success.', data: rows});
     } catch (error) {
@@ -170,7 +210,7 @@ router.delete('/documents/:id', async (req: Request, res: Response) => {
 
         await connection.query<RowDataPacket[]>(delete_doc, [document_id]);
 
-        return res.status(202).json({ message: 'Success.' });
+        return res.status(200).json({ message: 'Success.' });
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
