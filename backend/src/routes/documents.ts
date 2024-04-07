@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { Request, Response, Router } from 'express';
-import { RowDataPacket } from 'mysql2/promise';
+import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 import config from '../config/config';
 import pool from '../config/database';
@@ -147,13 +147,20 @@ router.put('/documents', async (req: Request, res: Response) => {
             return;
         }
 
-        // @todo: check if user has acccess to create documents in folder
+        if (!allowedDocumentTypes.includes(document_type)) {
+            res.status(400).json({ message: `The document_type '${document_type}' is not allowed. Allowed types are: ${allowedDocumentTypes.join(', ')}.` });
+            return;
+        }
+
+        // @todo: check if user has access to create documents in folder
 
         const sql_query = 'INSERT INTO documents(folder_id, owner_id, document_type, title) VALUES(?, ?, ?, ?)';
-        const [rows] = await connection.query<RowDataPacket[]>(sql_query, [folder_id || null, req.session.user.id, document_type, title]);
+        const [result] = await connection.query<ResultSetHeader>(sql_query, [folder_id || null, req.session.user.id, document_type, title]);
 
-        if(rows.length <= 0) {
-            throw Error('Failed inserting document');
+        // @todo: make a file
+
+        if (result.affectedRows <= 0) {
+            throw new Error('Failed inserting document');
         }
 
         return res.status(201).json({ message: 'Success.', data: rows });
@@ -207,8 +214,133 @@ router.delete('/documents/:id', async (req: Request, res: Response) => {
         // @note: all this works by assuming that the owner of the folder SHOULD own DELETE_PRIVILEGE for everything under the folder
 
         const delete_doc = 'DELETE FROM documents WHERE ID=?';
-
         await connection.query<RowDataPacket[]>(delete_doc, [document_id]);
+
+        return res.status(200).json({ message: 'Success.' });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    } finally {
+        if(connection) {
+            connection.release();
+        }
+    }
+});
+
+router.get('/documents/:id/share', async (req: Request, res: Response) => {
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        if(!req.session.user) {
+            res.status(401).json({ message: 'User not logged in.' });
+            return;
+        }
+
+        const document_id = req.params.id;
+
+        const sql = 'SELECT u.EMAIL, dp.READ_PRIVILEEG, dp.WRITE_PRIVILEEG, dp.DELETE_PRIVILEEG FROM users u JOIN document_privileges dp ON u.ID = dp.user_id JOIN documents d ON dp.document_id = d.ID WHERE d.ID = ?;';
+        const [rows] = await connection.query<RowDataPacket[]>(sql, [document_id]);
+
+        return res.status(200).json({ message: 'Success.', data: rows });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    } finally {
+        if(connection) {
+            connection.release();
+        }
+    }
+});
+
+router.post('/documents/:id/share', async (req: Request, res: Response) => {
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        if(!req.session.user) {
+            res.status(401).json({ message: 'User not logged in.' });
+            return;
+        }
+
+        const document_id = req.params.id;
+        const { read_privilege, write_privilege, delete_privilege } = req.body;
+
+        const owner_sql = 'SELECT d.owner_id FROM documents d WHERE ID = ?;';
+        const [owner_rows] = await connection.query<RowDataPacket[]>(owner_sql, [document_id]);
+        if(owner_rows.length === 0 && (owner_rows[0].owner_id !== req.session.user.id))
+            return res.status(401).json({ message: 'No access.' });
+
+        const sql = 'INSERT INTO document_privileges (document_id, READ_PRIVILEEG, WRITE_PRIVILEEG, DELETE_PRIVILEEG) VALUES (?, ?, ?, ?);';
+        await connection.query(sql, [document_id, read_privilege || false, write_privilege || false, delete_privilege || false]);
+
+        return res.status(200).json({ message: 'Success.' });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    } finally {
+        if(connection) {
+            connection.release();
+        }
+    }
+});
+
+router.post('/documents/:id/title', async (req: Request, res: Response) => {
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        if(!req.session.user) {
+            res.status(401).json({ message: 'User not logged in.' });
+            return;
+        }
+
+        const document_id = req.params.id;
+        const { new_title } = req.body;
+
+        // @todo: allow users with write to change title
+
+        const owner_sql = 'SELECT d.owner_id FROM documents d WHERE ID = ?;';
+        const [owner_rows] = await connection.query<RowDataPacket[]>(owner_sql, [document_id]);
+        if(owner_rows.length === 0 && (owner_rows[0].owner_id !== req.session.user.id))
+            return res.status(401).json({ message: 'No access.' });
+
+        const sql = 'UPDATE documents SET title = ? WHERE ID = ?;';
+        await connection.query(sql, [new_title, document_id]);
+
+        return res.status(200).json({ message: 'Success.' });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    } finally {
+        if(connection) {
+            connection.release();
+        }
+    }
+});
+
+router.post('/documents/:id/metadata', async (req: Request, res: Response) => {
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        if(!req.session.user) {
+            res.status(401).json({ message: 'User not logged in.' });
+            return;
+        }
+
+        const document_id = req.params.id;
+        const { new_metadata } = req.body;
+
+        // @todo: allow users with write to change title
+
+        const owner_sql = 'SELECT d.owner_id FROM documents d WHERE ID = ?;';
+        const [owner_rows] = await connection.query<RowDataPacket[]>(owner_sql, [document_id]);
+        if(owner_rows.length === 0 && (owner_rows[0].owner_id !== req.session.user.id))
+            return res.status(401).json({ message: 'No access.' });
+
+        const sql = 'UPDATE documents SET metadata = ? WHERE ID = ?;';
+        await connection.query(sql, [new_metadata, document_id]);
 
         return res.status(200).json({ message: 'Success.' });
     } catch (error) {

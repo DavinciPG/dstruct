@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npx tsx ./src/index.ts"
+    "start": "npx tsx ./src/index.ts",
+    "server": "ts-node -T -P ./tsconfig.json ./src/index.ts",
+    "pm2": "pm2 start pm2.config.js"
   },
   "keywords": [],
   "author": "",
@@ -22,10 +24,14 @@
     "dotenv": "^16.4.1",
     "express": "^4.18.2",
     "express-session": "^1.18.0",
+    "multer": "^1.4.5-lts.1",
     "mysql2": "^3.9.1",
     "nodemailer": "^6.9.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/multer": "^1.4.11"
   }
 }
