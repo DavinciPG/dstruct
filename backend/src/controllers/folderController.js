@@ -322,7 +322,8 @@ const foldersController = {
                 });
 
                 if(!privileges || (privileges.WRITE_PRIVILEGE === false && WRITE_PRIVILEGE === true)
-                    || (privileges.DELETE_PRIVILEGE === false && DELETE_PRIVILEGE === true)) {
+                    || (privileges.DELETE_PRIVILEGE === false && DELETE_PRIVILEGE === true)
+                    || (privileges.CREATE_PRIVILEGE === false && CREATE_PRIVILEGE === true)) {
                     return res.status(403).json({error: 'No Access.'});
                 }
             }
