@@ -5,6 +5,9 @@ const Folders = db.folders;
 const FolderPrivileges = db.folderprivileges;
 const Users = db.users;
 
+const fileController = require('./fileController');
+const { v4: uuidv4 } = require('uuid');
+
 const allowed_documents = ['pdf', 'docx', 'txt'];
 
 const documentsController = {
@@ -46,6 +49,17 @@ const documentsController = {
             }
 
             // @todo: create the actual file, associate file_path
+            const generateRandomFilename = (doc_type) => {
+                const timestamp = Date.now();
+                const uuid = uuidv4();
+                return `${timestamp}-${uuid}.${doc_type}`;
+            };
+
+            const generated_file_name = generateRandomFilename(document_type);
+
+            const file_created = await fileController.createFile(generated_file_name);
+            if(!file_created)
+                return res.status(500).json({ error: 'Failed creating file.'});
 
             const newDocument = await Document.create({
                 title,
@@ -53,7 +67,7 @@ const documentsController = {
                 metadata: metadata || null, // should we allow null?
                 FOLDER_ID: FOLDER_ID || null, // can be top most so no folder
                 owner_id: req.session.user.id,
-                file_path: '/1'
+                file_path: generated_file_name
             });
 
             return res.status(201).json(newDocument);
@@ -87,11 +101,20 @@ const documentsController = {
             });
 
             const documentIds = new Set();
-            const combinedDocuments = [...ownedDocuments, ...documentsWithReadPrivilege.filter(doc => {
-                const isDuplicate = documentIds.has(doc.ID);
-                documentIds.add(doc.ID);
-                return !isDuplicate;
-            })];
+            // Add IDs from ownedDocuments to the Set to track duplicates
+            ownedDocuments.forEach(doc => documentIds.add(doc.ID));
+
+            const combinedDocuments = [
+                ...ownedDocuments,
+                ...documentsWithReadPrivilege.filter(doc => {
+                    const isDuplicate = documentIds.has(doc.ID);
+                    if (!isDuplicate) {
+                        // If not a duplicate, add to the Set to ensure it's not added again
+                        documentIds.add(doc.ID);
+                    }
+                    return !isDuplicate;
+                })
+            ];
 
             return res.json(combinedDocuments);
         } catch (error) {
@@ -151,6 +174,9 @@ const documentsController = {
                     return res.status(403).json({ error: 'No Access.' });
             }
 
+            // @note: unsafe
+            await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
+
             await document.update({
                 title,
                 document_type,
@@ -158,7 +184,46 @@ const documentsController = {
                 FOLDER_ID
             });
 
+            // @note: imagine above errors, and we don't run this query lol
+            await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+
             return res.status(200).json(document);
+        } catch (error) {
+            console.error('Error updating document:', error);
+            return res.status(500).send('Internal Server Error');
+        }
+    },
+
+    // Placeholder since I don't have time to do multipart forms
+    async updateDocumentFile(req, res){
+        try {
+            // @note: rip data, no rollback exists
+            const file = req.file;
+            const document = await Document.findByPk(req.params.id);
+            if(!document)
+                return res.status(404).json({ error: 'Document Not Found!' });
+
+            if(document.owner_id !== req.session.user.id)
+            {
+                const privileges = await DocumentPrivileges.findOne({
+                    where: {
+                        document_id: req.params.id,
+                        user_id: req.session.user.id,
+                        WRITE_PRIVILEGE: true
+                    }
+                });
+
+                if (!privileges)
+                    return res.status(403).json({ error: 'No Access.' });
+            }
+
+            const fileContent = '1';
+
+            const updated = await fileController.updateFile(document.file_path, fileContent);
+            if(!updated)
+                return res.status().json({ error: 'Failed updating document' });
+
+            return res.status(200).json({ message: 'Updated Document.' });
         } catch (error) {
             console.error('Error updating document:', error);
             return res.status(500).send('Internal Server Error');
@@ -186,9 +251,17 @@ const documentsController = {
                     return res.status(403).json({ error: 'No Access.' });
             }
 
+            await DocumentPrivileges.destroy({
+                where: {
+                    document_id: req.params.id
+                }
+            });
+
             await Document.destroy({
                 where: { ID: req.params.id }
             });
+
+            await fileController.deleteFile(document.file_path);
 
             return res.status(200).json({ message: 'Document deleted'});
         } catch (error) {
@@ -202,6 +275,8 @@ const documentsController = {
             const document = await Document.findByPk(req.params.id);
             if(!document)
                 return res.status(404).json({ error: 'Document Not Found!' });
+
+            const { email, READ_PRIVILEGE, WRITE_PRIVILEGE, DELETE_PRIVILEGE } = req.body;
 
             if(document.owner_id !== req.session.user.id)
             {
@@ -217,9 +292,11 @@ const documentsController = {
                     return res.status(403).json({ error: 'No Access.' });
             }
 
-            const { email, READ_PRIVILEGE, WRITE_PRIVILEGE, DELETE_PRIVILEGE } = req.body;
+            // @todo: user with read_permissions can give delete_permissions // fixme
 
-            // @todo: data validation
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@voco\.ee$/;
+            if (!emailRegex.test(email))
+                return res.status(400).json({ error: 'Invalid email format. Email must end with @voco.ee' });
 
             const user = await Users.findOne({
                 where: {

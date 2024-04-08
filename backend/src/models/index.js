@@ -55,4 +55,8 @@ db.documentprivileges.belongsTo(db.documents, { foreignKey: 'document_id', as: '
 db.folders.hasMany(db.folderprivileges, { foreignKey: 'FOLDER_ID', as: 'Privileges' });
 db.folderprivileges.belongsTo(db.folders, { foreignKey: 'FOLDER_ID', as: 'Folder' });
 
+// User and User
+db.users.belongsTo(db.users, { as: 'Inviter', foreignKey: 'invited_by' });
+db.users.hasMany(db.users, { as: 'Invitees', foreignKey: 'invited_by' });
+
 module.exports = db;

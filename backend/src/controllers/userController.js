@@ -2,6 +2,7 @@ const db = require('../models');
 const User = db.users;
 
 const bcrypt = require('bcrypt');
+const { v4: uuidv4 } = require('uuid');
 
 const userController = {
     // we get our current session
@@ -54,6 +55,9 @@ const userController = {
             if(!passwordMatch)
                 return res.status(401).json({ error: 'Authentication Failure.' });
 
+            if(!user.can_access)
+                return res.status(401).json({ error: 'User Account Disabled.' });
+
             const user_client = {
                 email: user.EMAIL,
                 id: user.ID,
@@ -84,31 +88,150 @@ const userController = {
     // Fetch all users
     async getAllUsers(req, res) {
         try {
-            const users = await User.findAll();
-            res.json(users);
+            // @todo: limit to administrator
+            if(req.session.user.rank !== 2)
+                return res.status(401).json({ message: 'User Not Authorized To Access This.' });
+
+            const users = await User.findAll({
+                attributes: ['ID', 'EMAIL', 'teacher']
+            });
+
+            return res.status(200).json(users);
         } catch (error) {
             console.error('Error fetching users:', error);
             res.status(500).send('Internal Server Error');
         }
     },
 
-    // Find a user by email
-    async findUserByEmail(req, res) {
+    async getAllStudents(req, res) {
+        try {
+            if(req.session.user.rank === 0)
+                return res.status(401).json({ message: 'Unauthorized' });
+
+            const users = await User.findAll({
+                where: {
+                    teacher: false,
+                    administrator: false
+                },
+                attributes: ['EMAIL']
+            });
+
+            return res.status(200).json(users);
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            res.status(500).send('Internal Server Error');
+        }
+    },
+
+    async addUserByEmail(req, res) {
         try {
             const userEmail = req.body.email;
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@voco\.ee$/;
+            if (!emailRegex.test(userEmail))
+                return res.status(400).json({ error: 'Invalid email format. Email must end with @voco.ee' });
+
+            if(req.session.user.rank === 0)
+                return res.status(401).json({ message: 'Unauthorized.' });
+
             const user = await User.findOne({
-                where: { EMAIL: userEmail }
+                where: { EMAIL: userEmail },
+                attributes: ['ID', 'EMAIL']
             });
-            if (user) {
-                res.json(user);
-            } else {
-                res.status(404).send('User not found');
+
+            if(user && !user.can_access)
+            {
+                await user.update({
+                    can_access: true
+                });
+
+                return res.status(200).json({ message: 'User can now access the webpage.' });
             }
+
+            if(!user)
+            {
+                const genereated_password = uuidv4();
+                const hashed_password = await bcrypt.hash(genereated_password, 12);
+
+                await User.create({
+                    EMAIL: userEmail,
+                    teacher: false,
+                    administrator: false,
+                    invited_by: req.session.user.id,
+                    password: hashed_password,
+                    can_access: true
+                });
+
+                return res.status(201).json({ message: `Added user ${userEmail} with password ${genereated_password}` });
+            }
+
+            return res.status(400).json({ message: 'User already exists.' });
         } catch (error) {
             console.error('Error finding user by email:', error);
             res.status(500).send('Internal Server Error');
         }
     },
+    async removeUserByEmail(req, res) {
+        try {
+            const userEmail = req.body.email;
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@voco\.ee$/;
+            if (!emailRegex.test(userEmail))
+                return res.status(400).json({ error: 'Invalid email format. Email must end with @voco.ee' });
+
+            if(req.session.user.rank === 0)
+                return res.status(401).json({ message: 'Unauthorized.' });
+
+            const user = await User.findOne({
+                where: { EMAIL: userEmail },
+                attributes: ['ID', 'EMAIL']
+            });
+
+            if(!user || user.administrator)
+                return res.status(400).json({ error: 'User does not exist.' });
+
+            // @note: we just revoke usage privileges, would be catastrophic if we just deleted everything right
+            await user.update({
+               can_access: false
+            });
+
+            return res.status(200).json({ message: 'Revoked user privileges to access website.' });
+        } catch (error) {
+            console.error('Error finding user by email:', error);
+            res.status(500).send('Internal Server Error');
+        }
+    },
+    async resetUserPassword(req, res) {
+        try {
+            const userEmail = req.params.email;
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@voco\.ee$/;
+            if (!emailRegex.test(userEmail))
+                return res.status(400).json({ error: 'Invalid email format. Email must end with @voco.ee' });
+
+            if(req.session.user.rank === 0)
+                return res.status(401).json({ message: 'Unauthorized.' });
+
+            const user = await User.findOne({
+                where: { EMAIL: userEmail },
+                attributes: ['ID', 'EMAIL']
+            });
+
+            if(!user || user.administrator)
+                return res.status(400).json({ error: 'User does not exist.' });
+
+            const genereated_password = uuidv4();
+            const hashed_password = await bcrypt.hash(genereated_password, 12);
+
+            await user.update({
+                password: hashed_password
+            });
+
+            // @todo: save who requests password reset and also block deletion of files etc for a bit
+
+            return res.status(200).json({ message: `Reset ${userEmail} password to ${genereated_password}` });
+        } catch (error) {
+            console.error('Error finding user by email:', error);
+            res.status(500).send('Internal Server Error');
+        }
+    }
 };
 
 module.exports = userController;

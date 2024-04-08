@@ -10,4 +10,12 @@ router.post('/sessions', userController.authenticateSession);
 
 router.delete('/sessions', userController.destroySession);
 
+router.get('/sessions/students', userController.getAllStudents);
+
+router.post('/sessions/students', userController.addUserByEmail);
+
+router.delete('/sessions/students', userController.removeUserByEmail);
+
+router.post('/sessions/students/:email/reset-password', userController.resetUserPassword);
+
 module.exports = router;

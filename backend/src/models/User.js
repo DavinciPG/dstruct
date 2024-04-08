@@ -43,10 +43,18 @@ module.exports = (sequelize) => {
             defaultValue: 0,
             comment: "diagnostic availability"
         },
-        verified: {
+        invited_by: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'users',
+                key: 'ID'
+            }
+        },
+        can_access: {
             type: DataTypes.BOOLEAN,
             allowNull: false,
-            defaultValue: 0
+            defaultValue: 1,
         }
     }, {
         sequelize,
