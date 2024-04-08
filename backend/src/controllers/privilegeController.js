@@ -2,6 +2,8 @@ const db = require('../models');
 const FolderPrivileges = db.folderprivileges;
 const DocumentPrivileges = db.documentprivileges;
 
+// @todo: find usage for this
+
 const privilegeController = {
     // Find Document Privileges for user
     async getDocumentPrivileges(req, res) {

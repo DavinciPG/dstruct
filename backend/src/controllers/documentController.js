@@ -177,7 +177,7 @@ const documentsController = {
                 where: { ID: req.params.id }
             });
 
-            return res.status(204).json({ message: 'Document deleted'});
+            return res.status(200).json({ message: 'Document deleted'});
         } catch (error) {
             console.error('Error deleting document:', error);
             return res.status(500).send('Internal Server Error');
@@ -243,7 +243,7 @@ const documentsController = {
                 DELETE_PRIVILEGE
             });
 
-            return res.status(204).json({ message: 'Shared Document.' });
+            return res.status(200).json({ message: 'Shared Document.' });
         } catch (error) {
             console.error('Error creating/updating document privileges:', error);
             return res.status(500).send('Internal Server Error');
@@ -276,12 +276,12 @@ const documentsController = {
                 }
             })
 
-            return res.status(204).json(privileges);
+            return res.status(200).json(privileges);
         } catch (error) {
             console.error('Error finding document privileges:', error);
             return res.status(500).send('Internal Server Error');
         }
-    }
+    },
 };
 
 module.exports = documentsController;

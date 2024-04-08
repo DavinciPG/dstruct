@@ -346,7 +346,7 @@ const foldersController = {
                 DELETE_PRIVILEGE
             });
 
-            return res.status(204).json({ message: 'Shared folder.' });
+            return res.status(200).json({ message: 'Shared folder.' });
         } catch (error) {
             console.error('Error creating/updating folder privileges:', error);
             return res.status(500).send('Internal Server Error');
@@ -379,7 +379,7 @@ const foldersController = {
                 }
             })
 
-            return res.status(204).json(privileges);
+            return res.status(200).json(privileges);
         } catch (error) {
             console.error('Error finding folder privileges:', error);
             return res.status(500).send('Internal Server Error');
