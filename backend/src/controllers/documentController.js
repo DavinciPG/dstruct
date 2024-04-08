@@ -288,11 +288,12 @@ const documentsController = {
                     }
                 });
 
-                if (!privileges)
-                    return res.status(403).json({ error: 'No Access.' });
+                // @note: hopefully fixes the permission sharing bug, if not rip... no time to test
+                if(!privileges || (privileges.WRITE_PRIVILEGE === false && WRITE_PRIVILEGE === true)
+                    || (privileges.DELETE_PRIVILEGE === false && DELETE_PRIVILEGE === true)) {
+                    return res.status(403).json({error: 'No Access.'});
+                }
             }
-
-            // @todo: user with read_permissions can give delete_permissions // fixme
 
             const emailRegex = /^[a-zA-Z0-9._%+-]+@voco\.ee$/;
             if (!emailRegex.test(email))
