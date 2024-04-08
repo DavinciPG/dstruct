@@ -171,6 +171,13 @@ const foldersController = {
             // @note: My 2AM brain cannot seperate this into different endpoints, just save the data in the front and send the same data back if no changes made thanks
 
             const { title, category } = req.body;
+            let updateData = {};
+            if(title && (title.length > 0))
+                updateData.title = title;
+
+            if(category && (category.length > 0))
+                updateData.category = category;
+
             const folder = await Folders.findByPk(req.params.id);
             if(!folder)
                 return res.status(404).json({ error: 'Folder Not Found!' });
@@ -189,10 +196,7 @@ const foldersController = {
                     return res.status(403).json({ error: 'No Access.' });
             }
 
-            await folder.update({
-                title,
-                category
-            });
+            await folder.update(updateData);
 
             return res.status(200).json(folder);
         } catch (error) {

@@ -156,6 +156,21 @@ const documentsController = {
         try {
             // @note: My 2AM brain cannot seperate this into different endpoints, just save the data in the front and send the same data back if no changes made thanks
             const { title, document_type, metadata, FOLDER_ID } = req.body;
+
+            let updateData = {};
+
+            if(title && (title.length > 0))
+                updateData.title = title;
+
+            if(document_type && (allowed_documents.includes(document_type)))
+                updateData.document_type = document_type;
+
+            if(metadata && (metadata.length > 0))
+                updateData.metadata = metadata;
+
+            if(FOLDER_ID)
+                updateData.FOLDER_ID = FOLDER_ID;
+
             const document = await Document.findByPk(req.params.id);
             if(!document)
                 return res.status(404).json({ error: 'Document Not Found!' });
@@ -177,12 +192,7 @@ const documentsController = {
             // @note: unsafe
             await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
 
-            await document.update({
-                title,
-                document_type,
-                metadata,
-                FOLDER_ID
-            });
+            await document.update(updateData);
 
             // @note: imagine above errors, and we don't run this query lol
             await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
