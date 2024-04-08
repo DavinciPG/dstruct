@@ -61,7 +61,8 @@ const userController = {
             const user_client = {
                 email: user.EMAIL,
                 id: user.ID,
-                rank: user.teacher ? 1 : (user.administrator ? 2 : 0)
+                rank: user.teacher ? 1 : (user.administrator ? 2 : 0),
+                can_access: user.can_access
             }
 
             req.session.user = user_client;
@@ -105,7 +106,7 @@ const userController = {
 
     async getAllStudents(req, res) {
         try {
-            if(req.session.user.rank === 0)
+            if(req.session.user.rank === 0 || !req.session.user.can_access)
                 return res.status(401).json({ message: 'Unauthorized' });
 
             const users = await User.findAll({
@@ -130,7 +131,7 @@ const userController = {
             if (!emailRegex.test(userEmail))
                 return res.status(400).json({ error: 'Invalid email format. Email must end with @voco.ee' });
 
-            if(req.session.user.rank === 0)
+            if(req.session.user.rank === 0 || !req.session.user.can_access || req.session.user.email === userEmail)
                 return res.status(401).json({ message: 'Unauthorized.' });
 
             const user = await User.findOne({
@@ -177,7 +178,7 @@ const userController = {
             if (!emailRegex.test(userEmail))
                 return res.status(400).json({ error: 'Invalid email format. Email must end with @voco.ee' });
 
-            if(req.session.user.rank === 0)
+            if(req.session.user.rank === 0 || !req.session.user.can_access || req.session.user.email === userEmail)
                 return res.status(401).json({ message: 'Unauthorized.' });
 
             const user = await User.findOne({
@@ -206,7 +207,7 @@ const userController = {
             if (!emailRegex.test(userEmail))
                 return res.status(400).json({ error: 'Invalid email format. Email must end with @voco.ee' });
 
-            if(req.session.user.rank === 0)
+            if(req.session.user.rank === 0 || !req.session.user.can_access || req.session.user.email === userEmail)
                 return res.status(401).json({ message: 'Unauthorized.' });
 
             const user = await User.findOne({
