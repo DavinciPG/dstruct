@@ -309,6 +309,8 @@ const foldersController = {
             if(!folder)
                 return res.status(404).json({ error: 'Folder Not Found!' });
 
+            const { email, READ_PRIVILEGE, WRITE_PRIVILEGE, CREATE_PRIVILEGE, DELETE_PRIVILEGE } = req.body;
+
             if(folder.user_id !== req.session.user.id)
             {
                 const privileges = await FolderPrivileges.findOne({
@@ -319,11 +321,11 @@ const foldersController = {
                     }
                 });
 
-                if (!privileges)
-                    return res.status(403).json({ error: 'No Access.' });
+                if(!privileges || (privileges.WRITE_PRIVILEGE === false && WRITE_PRIVILEGE === true)
+                    || (privileges.DELETE_PRIVILEGE === false && DELETE_PRIVILEGE === true)) {
+                    return res.status(403).json({error: 'No Access.'});
+                }
             }
-
-            const { email, READ_PRIVILEGE, WRITE_PRIVILEGE, CREATE_PRIVILEGE, DELETE_PRIVILEGE } = req.body;
 
             const emailRegex = /^[a-zA-Z0-9._%+-]+@voco\.ee$/;
             if (!emailRegex.test(email))
