@@ -1,6 +1,8 @@
 const db = require('../models');
 const Folders = db.folders;
 const FolderPrivileges = db.folderprivileges;
+const Document = db.documents;
+const DocumentPrivileges = db.documentprivileges;
 const Users = db.users;
 
 const foldersController = {
@@ -8,7 +10,7 @@ const foldersController = {
     async createFolder(req, res) {
         try {
             const { _ID, title, category } = req.body;
-            if((title.length <= 0 || title.length >= 30) || (category.length <= 0 || category.length >= 30))
+            if(!title || title.length <= 0 || title.length >= 30)
                 return res.status(400).json({ error: 'Data invalid.' });
 
             if (_ID !== undefined && _ID !== null)
@@ -17,16 +19,18 @@ const foldersController = {
                 if(!folder)
                     return res.status(404).json({ error: 'Folder Not Found!' });
 
-                const privileges = await FolderPrivileges.findOne({
-                    where: {
-                        FOLDER_ID: _ID,
-                        user_id: req.session.user.id,
-                        CREATE_PRIVILEGE: true
-                    }
-                });
+                if(folder.user_id !== req.session.user.id) {
+                    const privileges = await FolderPrivileges.findOne({
+                        where: {
+                            FOLDER_ID: _ID,
+                            user_id: req.session.user.id,
+                            CREATE_PRIVILEGE: true
+                        }
+                    });
 
-                if (!privileges)
-                    return res.status(403).json({ error: 'No Access.' });
+                    if (!privileges)
+                        return res.status(403).json({error: 'No Access.'});
+                }
             }
 
             const newFolder = await Folders.create({
@@ -108,6 +112,41 @@ const foldersController = {
         }
     },
 
+
+    // Get documents by folder
+    async getDocumentsByFolderId(req, res) {
+        try {
+            const folder = await Folders.findByPk(req.params.id);
+            if(!folder)
+                return res.status(404).json({ error: 'Folder not found!' });
+
+            if(folder.user_id !== req.session.user.id)
+            {
+                const privileges = await FolderPrivileges.findOne({
+                    where: {
+                        FOLDER_ID: req.params.id,
+                        user_id: req.session.user.id,
+                        READ_PRIVILEGE: true
+                    }
+                });
+
+                if (!privileges)
+                    return res.status(403).json({ error: 'No Access.' });
+            }
+
+            const documents = await Document.findAll({
+                where: {
+                    FOLDER_ID: req.params.id
+                }
+            });
+
+            return res.json(documents);
+        } catch (error) {
+            console.error('Error fetching documents for folder:', error);
+            return res.status(500).send('Internal Server Error');
+        }
+    },
+
     // Update a folder
     async updateFolder(req, res) {
         try {
@@ -146,6 +185,8 @@ const foldersController = {
 
     // Delete a folder
     async deleteFolder(req, res) {
+        const transaction = await db.sequelize.transaction();
+
         try {
             const folder = await Folders.findByPk(req.params.id);
             if(!folder)
@@ -158,19 +199,87 @@ const foldersController = {
                         FOLDER_ID: req.params.id,
                         user_id: req.session.user.id,
                         DELETE_PRIVILEGE: true
-                    }
+                    },
+                    transaction
                 });
 
-                if (!privileges)
-                    return res.status(403).json({ error: 'No Access.' });
+                if (!privileges) {
+                    await transaction.rollback();
+                    return res.status(403).json({error: 'No Access.'});
+                }
             }
 
-            await Folders.destroy({
-                where: { ID: req.params.id }
+            // @note: we don't check for subfolder privileges because why not... user already owns the main folder
+
+            // Find all subfolders
+            // eslint-disable-next-line no-inner-declarations
+            async function findAllSubFolderIds(folderId, folderIds = new Set(), transaction) {
+                const subfolders = await Folders.findAll({
+                    where: { _ID: folderId },
+                    attributes: ['ID'],
+                    transaction
+                });
+
+                for (const subfolder of subfolders) {
+                    folderIds.add(subfolder.ID);
+                    await findAllSubFolderIds(subfolder.ID, folderIds);
+                }
+
+                return folderIds;
+            }
+
+            const folderIdsToDelete = await findAllSubFolderIds(req.params.id, new Set(), transaction);
+            let folderIdsArray = Array.from(folderIdsToDelete);
+            folderIdsArray.push(req.params.id);
+
+            const documents = await Document.findAll({
+                where: {
+                    FOLDER_ID: folderIdsArray
+                },
+                attributes: ['ID'],
+                transaction
             });
 
-            return res.status(204).json({ message: 'Folder deleted.' });
+            const documentIds = documents.map(doc => doc.ID);
+
+            if (documentIds.length > 0) {
+                // Destroy document privileges
+                await DocumentPrivileges.destroy({
+                    where: {
+                        document_id: documentIds
+                    },
+                    transaction
+                });
+
+                await Document.destroy({
+                    where: {
+                        ID: documentIds
+                    },
+                    transaction
+                });
+            }
+
+            // Destroy folder privileges if exist
+            await FolderPrivileges.destroy({
+                where: {
+                    FOLDER_ID: folderIdsArray
+                },
+                transaction
+            });
+
+            // @note: unsafe
+            await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction });
+
+            // Destroy all folders
+            await Folders.destroy({ where: { ID: folderIdsArray }, transaction });
+
+            // @note: imagine above errors, and we don't run this query lol
+            await db.sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction });
+
+            await transaction.commit();
+            return res.status(200).json({ message: 'Folder deleted.' });
         } catch (error) {
+            await transaction.rollback();
             console.error('Error deleting folder:', error);
             return res.status(500).send('Internal Server Error');
         }

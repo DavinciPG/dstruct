@@ -20,16 +20,18 @@ const documentsController = {
                 if(!folder)
                     return res.status(404).json({ error: 'Folder Not Found!' });
 
-                const privileges = await FolderPrivileges.findOne({
-                    where: {
-                        FOLDER_ID,
-                        user_id: req.session.user.id,
-                        CREATE_PRIVILEGE: true
-                    }
-                });
+                if(folder.user_id !== req.session.user.id) {
+                    const privileges = await FolderPrivileges.findOne({
+                        where: {
+                            FOLDER_ID,
+                            user_id: req.session.user.id,
+                            CREATE_PRIVILEGE: true
+                        }
+                    });
 
-                if (!privileges)
-                    return res.status(403).json({ error: 'No Access.' });
+                    if (!privileges)
+                        return res.status(403).json({error: 'No Access.'});
+                }
             }
 
             const newDocument = await Document.create({

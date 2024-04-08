@@ -18,4 +18,6 @@ router.get('/folders/:id/share', folderController.getSharedToFolder);
 
 router.put('/folders/:id/share', folderController.shareFolder);
 
+router.get('/folders/:id/documents', folderController.getDocumentsByFolderId);
+
 module.exports = router;
