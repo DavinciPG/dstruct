@@ -5,14 +5,25 @@ const Folders = db.folders;
 const FolderPrivileges = db.folderprivileges;
 const Users = db.users;
 
+const allowed_documents = ['pdf', 'docx', 'txt'];
+
 const documentsController = {
     // Create a new document
     async createDocument(req, res) {
         try {
             const { title, document_type, metadata, FOLDER_ID } = req.body;
 
-            // @todo: data validation
-            // @todo: create the actual file, associate file_path
+            if((!title || title.length <= 0))
+                return res.status(400).json({ error: 'Bad title.' });
+
+            if((!document_type || document_type.length <= 0 || !allowed_documents.includes(document_type)))
+            {
+                const allowedTypesStr = allowed_documents.join(', ');
+
+                return res.status(400).json({
+                    error: `Invalid document type. Allowed types are: ${allowedTypesStr}.`
+                });
+            }
 
             if (FOLDER_ID !== undefined && FOLDER_ID !== null)
             {
@@ -33,6 +44,8 @@ const documentsController = {
                         return res.status(403).json({error: 'No Access.'});
                 }
             }
+
+            // @todo: create the actual file, associate file_path
 
             const newDocument = await Document.create({
                 title,
@@ -190,7 +203,7 @@ const documentsController = {
             if(!document)
                 return res.status(404).json({ error: 'Document Not Found!' });
 
-            if(document.user_id !== req.session.user.id)
+            if(document.owner_id !== req.session.user.id)
             {
                 const privileges = await DocumentPrivileges.findOne({
                     where: {

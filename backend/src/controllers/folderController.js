@@ -11,7 +11,7 @@ const foldersController = {
         try {
             const { _ID, title, category } = req.body;
             if(!title || title.length <= 0 || title.length >= 30)
-                return res.status(400).json({ error: 'Data invalid.' });
+                return res.status(400).json({ error: 'Invalid title.' });
 
             if (_ID !== undefined && _ID !== null)
             {
@@ -307,7 +307,20 @@ const foldersController = {
 
             const { email, READ_PRIVILEGE, WRITE_PRIVILEGE, CREATE_PRIVILEGE, DELETE_PRIVILEGE } = req.body;
 
-            // @todo: data validation
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@voco\.ee$/;
+            if (!emailRegex.test(email))
+                return res.status(400).json({ error: 'Invalid email format. Email must end with @voco.ee' });
+
+            const isValidBoolean = value => {
+                return value === true || value === false || value === 1 || value === 0;
+            };
+
+            if (!isValidBoolean(READ_PRIVILEGE) ||
+                !isValidBoolean(WRITE_PRIVILEGE) ||
+                !isValidBoolean(CREATE_PRIVILEGE) ||
+                !isValidBoolean(DELETE_PRIVILEGE)) {
+                return res.status(400).json({ error: 'Privileges must be true, false, 1, or 0' });
+            }
 
             const user = await Users.findOne({
                 where: {
