@@ -2,7 +2,7 @@ const cors = require('cors');
 
 class CorsHandler {
     constructor() {
-        this.whitelistedIps = ['http://localhost', 'http://193.40.62.2', 'https://dfront.vocoprojektid.ee'];
+        this.whitelistedIps = ['http://localhost', 'http://localhost:8080', 'http://193.40.62.2', 'https://dfront.vocoprojektid.ee', 'http://84.50.240.255:8080'];
         this.corsOptions = {
             origin: (origin, callback) => {
                 if (this.whitelistedIps.indexOf(origin) !== -1 || !origin) {

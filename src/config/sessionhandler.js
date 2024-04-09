@@ -41,8 +41,10 @@ class SessionHandler {
             resave: false,
             saveUninitialized: true,
             cookie: {
-                sameSite: 'lax',
-                secure: false, // hmm
+                sameSite: 'None', // set to 'lax' when in production
+                secure: true,
+                httpOnly: true, // remove when in production
+                maxAge: 1000 * 60 * 60 * 24 * 30
             },
         });
     }
