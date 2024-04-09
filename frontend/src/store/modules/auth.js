@@ -26,9 +26,9 @@ const actions = {
                     console.log(state.user);
                     return;
                 }
+            } else {
+                await actions.unAuthorize({ commit });
             }
-
-            await actions.unAuthorize({ commit });
         } catch (error) {
             console.error('Error checking authorization:', error);
             await actions.unAuthorize({ commit });

@@ -1,6 +1,7 @@
 <template>
   <div v-if="isLoggedIn">
     <nav class="navbar">
+      <a><router-link to="/dashboard">DHS</router-link></a>
       <div class="navbar-placeholder"></div>
 
       <div class="dropdown">
@@ -72,6 +73,11 @@ html, body {
   align-items: center;
   padding: 0.5rem 1rem;
   background-color: #0a0a0a;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
 }
 
 .navbar-placeholder {
