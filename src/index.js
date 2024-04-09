@@ -12,6 +12,8 @@ const CorsHandler = require('./config/corshandler');
 const corsHandler = new CorsHandler();
 corsHandler.applyTo(app);
 
+app.set('trust proxy', 1);
+
 // parser
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: false, limit: '50mb' }));
