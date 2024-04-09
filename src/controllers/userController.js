@@ -114,7 +114,7 @@ const userController = {
                     teacher: false,
                     administrator: false
                 },
-                attributes: ['EMAIL']
+                attributes: ['EMAIL', 'can_access']
             });
 
             return res.status(200).json(users);
