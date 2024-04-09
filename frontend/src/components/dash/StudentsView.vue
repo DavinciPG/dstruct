@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-container">
+  <div class="students-container">
     <div v-if="isLoggedIn">
 
     </div>
@@ -16,15 +16,15 @@ export default {
     isLoggedIn() {
       return store.state.auth.isAuthenticated;
     },
-    user() {
-      return store.state.auth.user;
+    email() {
+      return store.state.auth.user?.email;
     }
   }
 }
 </script>
 
 <style scoped>
-.dashboard-container {
+.students-container {
 
 }
 </style>

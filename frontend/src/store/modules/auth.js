@@ -40,6 +40,7 @@ const actions = {
         localStorage.setItem('isAuthenticated', isAuthenticated);
     },
     async unAuthorize({ commit }) {
+        await axios.delete('/sessions');
         commit('unSetStatus');
         localStorage.clear();
     }

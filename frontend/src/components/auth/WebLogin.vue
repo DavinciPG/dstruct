@@ -22,7 +22,7 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex';
+import store from "@/store";
 import router from "@/router";
 import { loadScript } from "vue-plugin-load-script";
 
@@ -47,7 +47,6 @@ export default {
     await loadScript('https://kit.fontawesome.com/f18c6cb8af.js');
   },
   methods: {
-    ...mapActions(['authorize']),
     async handleLogin() {
       try {
         const response = await this.$http.post('/sessions', {
@@ -56,7 +55,7 @@ export default {
         });
 
         if (response.status === 202) {
-          await this.authorize(response.data.data);
+          await store.dispatch('authorize', response.data.data);
           await router.push('/dashboard');
         }
       } catch (error) {
