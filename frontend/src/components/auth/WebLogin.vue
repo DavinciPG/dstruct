@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <div class="logo-container">
-      <span class="logo-text">DStruct</span>
+      <span class="logo-text">DHS</span>
     </div>
       <div class="login-card">
         <form @submit.prevent="handleLogin">
