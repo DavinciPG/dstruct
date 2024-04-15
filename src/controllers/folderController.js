@@ -403,7 +403,12 @@ const foldersController = {
             const privileges = await FolderPrivileges.findAll({
                 where: {
                     FOLDER_ID: req.params.id
-                }
+                },
+                include: [{
+                    model: db.users,
+                    as: 'User',
+                    attributes: ['EMAIL']
+                }]
             })
 
             return res.status(200).json(privileges);

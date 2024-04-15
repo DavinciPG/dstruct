@@ -376,6 +376,7 @@ const documentsController = {
                 },
                 include: [{
                     model: db.users,
+                    as: 'User',
                     attributes: ['EMAIL']
                 }]
             });
