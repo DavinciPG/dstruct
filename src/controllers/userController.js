@@ -215,8 +215,8 @@ const userController = {
                 attributes: ['ID', 'EMAIL']
             });
 
-            if(!user || user.administrator)
-                return res.status(400).json({ error: 'User does not exist.' });
+            if(!user || user.administrator || (req.session.user.rank != 2 && user.teacher))
+                return res.status(400).json({ error: 'User does not exist or not enough privilegees' });
 
             const genereated_password = uuidv4();
             const hashed_password = await bcrypt.hash(genereated_password, 12);

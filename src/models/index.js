@@ -51,6 +51,12 @@ db.folders.belongsTo(db.users, { foreignKey: 'user_id' });
 db.documents.hasMany(db.documentprivileges, { foreignKey: 'document_id', as: 'Privileges' });
 db.documentprivileges.belongsTo(db.documents, { foreignKey: 'document_id', as: 'Document' });
 
+// DocumentPrivileges and User
+db.documentprivileges.belongsTo(db.users, { foreignKey: 'user_id', as: 'User' });
+
+// FolderPrivileges and User
+db.folderprivileges.belongsTo(db.users, { foreignKey: 'user_id', as: 'User' });
+
 // FolderPrivileges and Folder
 db.folders.hasMany(db.folderprivileges, { foreignKey: 'FOLDER_ID', as: 'Privileges' });
 db.folderprivileges.belongsTo(db.folders, { foreignKey: 'FOLDER_ID', as: 'Folder' });
