@@ -496,7 +496,7 @@ const documentsController = {
                     return res.status(403).json({error: 'No Access.'});
             }
 
-            const filePath = path.join(__dirname, 'uploads', document.file_path);
+            const filePath = path.join(__dirname, '../files', document.file_path);
             if (!fs.existsSync(filePath)) {
                 return res.status(404).json({ error: 'File not found.' });
             }
