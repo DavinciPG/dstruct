@@ -18,4 +18,8 @@ router.get('/documents/:id/share', documentController.getSharedToDocument);
 
 router.put('/documents/:id/share', documentController.shareDocument);
 
+router.put('/documents/upload', documentController.uploadDocument);
+
+router.put('/documents/upload/details', documentController.uploadDocumentDetails);
+
 module.exports = router;

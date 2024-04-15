@@ -7,6 +7,11 @@ const Users = db.users;
 
 const fileController = require('./fileController');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
+const util = require('util');
+
+const rename = util.promisify(fs.rename);
 
 const allowed_documents = ['pdf', 'docx', 'txt'];
 
@@ -387,6 +392,90 @@ const documentsController = {
             return res.status(500).send('Internal Server Error');
         }
     },
+
+    async uploadDocument(req, res) {
+        try {
+            if (!req.file) {
+                return res.status(400).send('No file uploaded.');
+            }
+
+            const document_type = path.extname(req.file.originalname);
+            if((!document_type || document_type.length <= 0 || !allowed_documents.includes(document_type)))
+            {
+                const allowedTypesStr = allowed_documents.join(', ');
+
+                return res.status(400).json({
+                    error: `Invalid document type. Allowed types are: ${allowedTypesStr}.`
+                });
+            }
+            const generateRandomFilename = (doc_type) => {
+                const timestamp = Date.now();
+                const uuid = uuidv4();
+                return `${timestamp}-${uuid}.${doc_type}`;
+            };
+
+            const generated_file_name = generateRandomFilename(document_type);
+            const newFilePath = path.join(__dirname, 'uploads', generated_file_name);
+
+            await rename(req.file.path, newFilePath);
+
+            return res.status(200).json({ message: 'File uploaded successfully', filename: generated_file_name });
+        } catch (error) {
+            console.error('Error uploading document:', error);
+            return res.status(500).send('Internal Server Error');
+        }
+    },
+    async uploadDocumentDetails(req, res) {
+        try {
+            const { title, document_type, metadata, FOLDER_ID, generated_file_name } = req.body;
+
+            if((!title || title.length <= 0))
+                return res.status(400).json({ error: 'Bad title.' });
+
+            if((!document_type || document_type.length <= 0 || !allowed_documents.includes(document_type)))
+            {
+                const allowedTypesStr = allowed_documents.join(', ');
+
+                return res.status(400).json({
+                    error: `Invalid document type. Allowed types are: ${allowedTypesStr}.`
+                });
+            }
+
+            if (FOLDER_ID !== undefined && FOLDER_ID !== null)
+            {
+                const folder = await Folders.findByPk(FOLDER_ID);
+                if(!folder)
+                    return res.status(404).json({ error: 'Folder Not Found!' });
+
+                if(folder.user_id !== req.session.user.id) {
+                    const privileges = await FolderPrivileges.findOne({
+                        where: {
+                            FOLDER_ID,
+                            user_id: req.session.user.id,
+                            CREATE_PRIVILEGE: true
+                        }
+                    });
+
+                    if (!privileges)
+                        return res.status(403).json({error: 'No Access.'});
+                }
+            }
+
+            const newDocument = await Document.create({
+                title,
+                document_type,
+                metadata: metadata || null, // should we allow null?
+                FOLDER_ID: FOLDER_ID || null, // can be top most so no folder
+                owner_id: req.session.user.id,
+                file_path: generated_file_name
+            });
+
+            return res.status(201).json(newDocument);
+        } catch (error) {
+            console.error('Error uploading document:', error);
+            return res.status(500).send('Internal Server Error');
+        }
+    }
 };
 
 module.exports = documentsController;
