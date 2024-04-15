@@ -447,7 +447,7 @@ export default {
           'Content-Type': 'multipart/form-data'
         }
       }).then(response => {
-        axios.put('/docs/documents/upload/details', { title: this.uploadTitle, FOLDER_ID: this.currentFolderID || null, generated_file_name: response.data.file_name })
+        axios.put('/docs/documents/upload/details', { title: this.uploadTitle, FOLDER_ID: this.currentFolderID || null, generated_file_name: response.data.filename })
             .then( response2 => {
               console.log(response2);
               this.closeUploadModal();
