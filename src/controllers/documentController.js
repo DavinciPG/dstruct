@@ -48,7 +48,6 @@ const documentsController = {
                 }
             }
 
-            // @todo: create the actual file, associate file_path
             const generateRandomFilename = (doc_type) => {
                 const timestamp = Date.now();
                 const uuid = uuidv4();
@@ -357,7 +356,7 @@ const documentsController = {
             if(!document)
                 return res.status(404).json({ error: 'Document Not Found!' });
 
-            if(document.user_id !== req.session.user.id)
+            if(document.owner_id !== req.session.user.id)
             {
                 const privileges = await DocumentPrivileges.findOne({
                     where: {
@@ -374,8 +373,12 @@ const documentsController = {
             const privileges = await DocumentPrivileges.findAll({
                 where: {
                     document_id: req.params.id
-                }
-            })
+                },
+                include: [{
+                    model: db.users,
+                    attributes: ['EMAIL']
+                }]
+            });
 
             return res.status(200).json(privileges);
         } catch (error) {
