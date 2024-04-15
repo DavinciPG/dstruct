@@ -12,6 +12,8 @@
         </div>
       </div>
 
+      <button @click="showUploadModal = true">+ Upload</button>
+
       <div class="table-container">
         <table>
           <thead>
@@ -61,6 +63,16 @@
           </tr>
           </tbody>
         </table>
+      </div>
+
+      <div v-if="showUploadModal" class="modal">
+        <div class="modal-content">
+          <span class="close" @click="closeUploadModal">&times;</span>
+          <h3>Upload New Document</h3>
+          <input type="text" v-model="uploadTitle" placeholder="Enter document title">
+          <input type="file" @change="handleFileUpload">
+          <button @click="submitUpload">Upload</button>
+        </div>
       </div>
 
       <div v-if="showModalCreate" class="modal">
@@ -162,6 +174,9 @@ export default {
       foldercategory: '',
       documenttitle: '',
       documenttype: '',
+      showUploadModal: false,
+      uploadTitle: '',
+      uploadFile: null,
     };
   },
   methods: {
@@ -409,7 +424,43 @@ export default {
             alert('Failed to update permissions. Please try again.');
             share[privilegeType] = !share[privilegeType];
           });
-    }
+    },
+    handleFileUpload(event) {
+      this.uploadFile = event.target.files[0]; // Capture the file from the input
+    },
+    closeUploadModal() {
+      this.showUploadModal = false;
+      this.uploadTitle = '';
+      this.uploadFile = null;
+    },
+    submitUpload() {
+      if (!this.uploadFile || !this.uploadTitle) {
+        alert("Please provide a title and select a file.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', this.uploadFile);
+
+      axios.put('/docs/documents/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }).then(response => {
+        axios.put('/docs/documents/upload/details', { title: this.uploadTitle, FOLDER_ID: this.currentFolderID || null, generated_file_name: response.data.file_name })
+            .then( response2 => {
+              console.log(response2);
+              this.closeUploadModal();
+              alert('Upload successful.');
+            }).catch(error => {
+          console.error('Error uploading file:', error);
+          alert('Failed to upload the document.');
+        })
+      }).catch(error => {
+        console.error('Error uploading file:', error);
+        alert('Failed to upload the document.');
+      });
+    },
   },
   computed: {
     isLoggedIn() {
