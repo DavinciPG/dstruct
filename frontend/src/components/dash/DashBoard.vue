@@ -391,12 +391,10 @@ export default {
     updatePrivilege(share, privilegeType) {
       const payload = {
         email: share.User.EMAIL,
-        privileges: {
-          READ_PRIVILEGE: share.READ_PRIVILEGE,
-          WRITE_PRIVILEGE: share.WRITE_PRIVILEGE,
-          DELETE_PRIVILEGE: share.DELETE_PRIVILEGE,
-          CREATE_PRIVILEGE: share.CREATE_PRIVILEGE || undefined  // Only for folders
-        }
+        READ_PRIVILEGE: share.READ_PRIVILEGE,
+        WRITE_PRIVILEGE: share.WRITE_PRIVILEGE,
+        DELETE_PRIVILEGE: share.DELETE_PRIVILEGE,
+        CREATE_PRIVILEGE: share.CREATE_PRIVILEGE || undefined  // Only for folders
       };
 
       const type = share.document_id === null ? 'folders' : 'documents';
