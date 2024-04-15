@@ -95,6 +95,7 @@
           <span class="close" @click="closeModal()">&times;</span>
           <h3>Edit {{ selectedItem.type }}: {{ selectedItem.title }}</h3>
           <button @click="deleteItem()">Delete</button>
+          <button @click="downloadFile(selectedItem)">Download</button>
           <h3>Share {{ selectedItem.type }}</h3>
           <input type="email" v-model="shareEmail" placeholder="Enter email to share with">
           <div v-if="selectedItem.type === 'document'">
@@ -461,6 +462,10 @@ export default {
         console.error('Error uploading file:', error);
         alert('Failed to upload the document.');
       });
+    },
+    downloadFile(item) {
+      const url = `https://dstruct.vocoprojektid.ee/api/docs/documents/${item.ID}/download`;
+      window.open(url, '_blank');
     },
   },
   computed: {
