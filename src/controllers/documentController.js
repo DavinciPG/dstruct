@@ -424,7 +424,7 @@ const documentsController = {
             if((!title || title.length <= 0))
                 return res.status(400).json({ error: 'Bad title.' });
 
-            const document_type = path.extname(req.file.originalname).slice(1);
+            const document_type = path.extname(generated_file_name).slice(1);
 
             if((!document_type || document_type.length <= 0 || !allowed_documents.includes(document_type)))
             {
