@@ -399,7 +399,7 @@ const documentsController = {
                 return res.status(400).send('No file uploaded.');
             }
 
-            const document_type = path.extname(req.file.originalname).slice(1);
+            const document_type = path.extname(req.file.filename).slice(1);
 
             if (!allowed_documents.includes(document_type)) {
                 const allowedTypesStr = allowed_documents.join(', ');
