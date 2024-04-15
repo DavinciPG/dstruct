@@ -22,4 +22,6 @@ router.put('/documents/upload', documentController.uploadDocument);
 
 router.put('/documents/upload/details', documentController.uploadDocumentDetails);
 
+router.get('/documents/:id/download', documentController.downloadDocument);
+
 module.exports = router;

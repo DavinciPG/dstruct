@@ -475,6 +475,46 @@ const documentsController = {
             console.error('Error uploading document:', error);
             return res.status(500).send('Internal Server Error');
         }
+    },
+    async downloadDocument(req, res) {
+        try {
+            const id = req.params.id;
+
+            const document = await Document.findOne({
+                where: {
+                    ID: id
+                }
+            });
+
+            if(!document)
+                return res.status(404).json({ error: 'Document Not Found!' });
+
+            if(document.owner_id !== req.session.user.id) {
+                const privileges = await DocumentPrivileges.findOne({
+                    where: {
+                        document_id: document.ID,
+                        user_id: req.session.user.id,
+                        READ_PRIVILEGE: true
+                    }
+                });
+
+                if (!privileges)
+                    return res.status(403).json({error: 'No Access.'});
+            }
+
+            const filePath = path.join(__dirname, 'uploads', document.file_path);
+            if (!fs.existsSync(filePath)) {
+                return res.status(404).json({ error: 'File not found.' });
+            }
+
+            res.setHeader('Content-Disposition', 'attachment; filename=' + document.file_path);
+            res.setHeader('Content-Type', 'application/octet-stream');
+
+            fs.createReadStream(filePath).pipe(res);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            return res.status(500).send('Internal Server Error');
+        }
     }
 };
 
