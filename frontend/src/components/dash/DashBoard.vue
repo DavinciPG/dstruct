@@ -109,16 +109,15 @@
             </tr>
             </thead>
             <tbody>
-            <tr v-for="share in sharedWith[selectedItem.ID]" :key="share.email">
-              <td>{{ share.email }}</td>
-              <td><input type="checkbox" v-model="share.READ_PRIVILEGE"></td>
-              <td><input type="checkbox" v-model="share.WRITE_PRIVILEGE"></td>
-              <td><input type="checkbox" v-model="share.DELETE_PRIVILEGE"></td>
-              <td v-if="selectedItem.type === 'folder'"><input type="checkbox" v-model="share.CREATE_PRIVILEGE"></td>
+            <tr v-for="share in sharedWith[selectedItem.ID]" :key="share.User.EMAIL">
+              <td>{{ share.User.EMAIL }}</td>
+              <td><input type="checkbox" @change="updatePrivilege(share, 'READ_PRIVILEGE')" v-model="share.READ_PRIVILEGE"></td>
+              <td><input type="checkbox" @change="updatePrivilege(share, 'WRITE_PRIVILEGE')" v-model="share.WRITE_PRIVILEGE"></td>
+              <td><input type="checkbox" @change="updatePrivilege(share, 'DELETE_PRIVILEGE')" v-model="share.DELETE_PRIVILEGE"></td>
+              <td v-if="selectedItem.type === 'folder'"><input type="checkbox" @change="updatePrivilege(share, 'CREATE_PRIVILEGE')" v-model="share.CREATE_PRIVILEGE"></td>
             </tr>
             </tbody>
           </table>
-
         </div>
       </div>
     </div>
@@ -388,6 +387,30 @@ export default {
       if (this.$refs.dropdown && !this.$refs.dropdown.contains(event.target)) {
         this.showDropdown = false;
       }
+    },
+    updatePrivilege(share, privilegeType) {
+      const payload = {
+        email: share.User.EMAIL,
+        privileges: {
+          READ_PRIVILEGE: share.READ_PRIVILEGE,
+          WRITE_PRIVILEGE: share.WRITE_PRIVILEGE,
+          DELETE_PRIVILEGE: share.DELETE_PRIVILEGE,
+          CREATE_PRIVILEGE: share.CREATE_PRIVILEGE || undefined  // Only for folders
+        }
+      };
+
+      const type = share.document_id === null ? 'folders' : 'documents';
+      const id = share.document_id === null ? share.FOLDER_ID : share.document_id;
+
+      axios.put(`/docs/${type}/${id}/share`, payload)
+          .then(response => {
+            console.log(`Permissions updated for ${payload.email}`, response);
+          })
+          .catch(error => {
+            console.error('Failed to update permissions:', error);
+            alert('Failed to update permissions. Please try again.');
+            share[privilegeType] = !share[privilegeType];
+          });
     }
   },
   computed: {
