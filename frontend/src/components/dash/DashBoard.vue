@@ -451,6 +451,7 @@ export default {
             .then( response2 => {
               console.log(response2);
               this.closeUploadModal();
+              this.fetchItems();
               alert('Upload successful.');
             }).catch(error => {
           console.error('Error uploading file:', error);
