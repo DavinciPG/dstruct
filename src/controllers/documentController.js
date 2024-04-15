@@ -399,7 +399,7 @@ const documentsController = {
                 return res.status(400).send('No file uploaded.');
             }
 
-            const document_type = path.extname(req.file.originalname);
+            const document_type = path.extname(req.file.originalname).slice(1);
 
             if (!allowed_documents.includes(document_type)) {
                 const allowedTypesStr = allowed_documents.join(', ');
@@ -419,10 +419,12 @@ const documentsController = {
     },
     async uploadDocumentDetails(req, res) {
         try {
-            const { title, document_type, metadata, FOLDER_ID, generated_file_name } = req.body;
+            const { title, metadata, FOLDER_ID, generated_file_name } = req.body;
 
             if((!title || title.length <= 0))
                 return res.status(400).json({ error: 'Bad title.' });
+
+            const document_type = path.extname(req.file.originalname).slice(1);
 
             if((!document_type || document_type.length <= 0 || !allowed_documents.includes(document_type)))
             {
