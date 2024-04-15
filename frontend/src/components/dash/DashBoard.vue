@@ -2,6 +2,16 @@
   <div class="dashboard-container">
     <div v-if="isLoggedIn">
       <input type="text" v-model="searchText" placeholder="Search..." @input="filterItems">
+
+      <div class="new-item-dropdown" ref="dropdown">
+        <button @click="toggleDropdown">+ New</button>
+        <div v-if="showDropdown" class="dropdown-menu">
+          <button @click="createNewItem('folder')">Folder</button>
+          <button @click="createNewItem('pdf')">PDF</button>
+          <button @click="createNewItem('docx')">DOCX</button>
+        </div>
+      </div>
+
       <div class="table-container">
         <table>
           <thead>
@@ -51,6 +61,21 @@
           </tr>
           </tbody>
         </table>
+      </div>
+
+      <div v-if="showModalCreate" class="modal">
+        <div class="modal-content">
+          <span class="close" @click="closeCreateModal">&times;</span>
+          <h3>Create New {{ createType }}</h3>
+          <div v-if="createType === 'folder'">
+            <input type="text" v-model="foldertitle" placeholder="Folder Title">
+            <input type="text" v-model="foldercategory" placeholder="Folder Category (optional)">
+          </div>
+          <div v-else>
+            <input type="text" v-model="documenttitle" placeholder="Document Title">
+          </div>
+          <button @click="submitNewItem">Create</button>
+        </div>
       </div>
 
       <div v-if="showModal" class="modal">
@@ -131,6 +156,13 @@ export default {
       currentFolderID: null,
       clickTimer: null,
       sharedWith: {},
+      showDropdown: false,
+      showModalCreate: false,
+      createType: null,
+      foldertitle: '',
+      foldercategory: '',
+      documenttitle: '',
+      documenttype: '',
     };
   },
   methods: {
@@ -307,6 +339,56 @@ export default {
             console.error("Failed to fetch sharing details:", error);
           });
     },
+    toggleDropdown() {
+      this.showDropdown = !this.showDropdown;
+    },
+    createNewItem(type) {
+      this.createType = type;
+      this.showModalCreate = true;
+      this.showDropdown = false;
+    },
+    submitNewItem() {
+      switch (this.createType) {
+        case 'folder':
+          axios.put('/docs/folders', {
+            title: this.foldertitle,
+            category: this.foldercategory || null,
+            _ID: this.currentFolderID || null
+          }).then(response => {
+            console.log('Folder created:', response);
+            this.fetchItems();
+          }).catch(error => {
+            console.error('Error creating folder:', error);
+          });
+          break;
+        case 'pdf':
+        case 'docx':
+          axios.put('/docs/documents', {
+            title: this.documenttitle,
+            document_type: this.createType,
+            FOLDER_ID: this.currentFolderID || null
+          }).then(response => {
+            console.log('Document created:', response);
+            this.fetchItems();
+          }).catch(error => {
+            console.error('Error creating document:', error);
+          });
+          break;
+      }
+      this.closeCreateModal();
+    },
+    closeCreateModal() {
+      this.showModalCreate = false;
+      this.foldertitle = '';
+      this.foldercategory = '';
+      this.documenttitle = '';
+      this.documenttype = '';
+    },
+    handleClickOutside(event) {
+      if (this.$refs.dropdown && !this.$refs.dropdown.contains(event.target)) {
+        this.showDropdown = false;
+      }
+    }
   },
   computed: {
     isLoggedIn() {
@@ -320,6 +402,10 @@ export default {
     await loadScript('https://kit.fontawesome.com/f18c6cb8af.js');
 
     this.fetchItems();
+    document.addEventListener('click', this.handleClickOutside);
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside);
   }
 }
 </script>
@@ -459,5 +545,35 @@ input[type="checkbox"] {
 
 .go-back-button i {
   margin-right: 5px;
+}
+
+.new-item-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  position: absolute;
+  left: 0;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 100;
+  display: block;
+}
+
+.dropdown-menu button {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+}
+
+.dropdown-menu button:hover {
+  background-color: #f1f1f1;
 }
 </style>
