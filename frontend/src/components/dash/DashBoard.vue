@@ -187,7 +187,6 @@ export default {
         return;
       }
 
-      alert(`Deleted ${this.selectedItem.type}: ${this.selectedItem.title}`);
       axios.delete(`/docs/${this.selectedItem.type}s/${this.selectedItem.ID}`)
           .then(response => {
             console.log('Delete successful:', response);
