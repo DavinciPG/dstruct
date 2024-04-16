@@ -9,7 +9,7 @@
           {{ user?.email }} <i class="fas fa-caret-down"></i>
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-          <!-- <li><router-link to="/profile" class="dropdown-item">Profile</router-link></li> -->
+          <li><router-link to="/dashboard" class="dropdown-item">Dashboard</router-link></li>
           <li v-if="user?.rank > 0"><router-link to="/students" class="dropdown-item">Students</router-link></li>
           <li><router-link to="/logout" class="dropdown-item logout">Logout</router-link></li>
         </ul>

@@ -9,6 +9,7 @@
           <button @click="createNewItem('folder')">Folder</button>
           <button @click="createNewItem('pdf')">PDF</button>
           <button @click="createNewItem('docx')">DOCX</button>
+          <button @click="createNewItem('txt')">TXT</button>
         </div>
       </div>
 
@@ -220,11 +221,15 @@ export default {
     },
     filterItems() {
       let lowerSearchText = this.searchText.toLowerCase();
-      this.filteredItems = this.items.filter(item =>
-          (item.title.toLowerCase().includes(lowerSearchText) ||
-              (item.category && item.category.toLowerCase().includes(lowerSearchText))) &&
-          (this.currentFolderID ? item._ID === this.currentFolderID : !item._ID)
-      );
+      if(lowerSearchText.length > 0)
+      {
+        this.filteredItems = this.items.filter(item =>
+            (item.title.toLowerCase().includes(lowerSearchText) ||
+                (item.category && item.category.toLowerCase().includes(lowerSearchText)))
+        );
+      } else {
+        this.filteredItems = this.items.filter(item => (!item._ID && !item.FOLDER_ID));
+      }
     },
     closeModal() {
       this.showModal = false;

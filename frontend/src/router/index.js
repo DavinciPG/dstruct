@@ -35,8 +35,7 @@ router.beforeEach(async (to, from, next) => {
         next('/dashboard');
     } else if(to.meta.teacherOnly && user?.rank === 0) {
         next('/dashboard');
-    }
-    else {
+    } else {
         next();
     }
 });
