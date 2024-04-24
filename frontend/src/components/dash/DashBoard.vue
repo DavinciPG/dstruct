@@ -23,6 +23,7 @@
               <button v-if="currentFolderID" @click="goBack" class="go-back-button">
                 <i class="fa fa-arrow-left"></i> Back
               </button>
+              <span class="header-folder-name" v-if="currentFolderID">{{ currentFolderName }}</span>
             </th>
           </tr>
           <tr>
@@ -179,6 +180,7 @@ export default {
       showUploadModal: false,
       uploadTitle: '',
       uploadFile: null,
+      currentFolderName: null,
     };
   },
   methods: {
@@ -211,6 +213,7 @@ export default {
     },
     handleFolderClick(folder) {
       this.currentFolderID = folder.ID;
+      this.currentFolderName = folder.title;
       this.updateView();
     },
     updateView() {
@@ -253,6 +256,9 @@ export default {
           });
     },
     enableEditing(item, field) {
+      if (item.type === 'document' && field === 'document_type') {
+        return;
+      }
       this.editingId = item.ID;
       this.editingField = field;
       if (field === 'title') {
@@ -268,18 +274,15 @@ export default {
       });
     },
     updateField(item, field) {
+      if (item.type === 'document' && field === 'document_type') {
+        return;
+      }
       const oldValue = item[field];
       const newValue = this['editing' + field.charAt(0).toUpperCase() + field.slice(1)];
-
       if (oldValue !== newValue) {
         item[field] = newValue;
-        const endpoint = (item.type === 'folder')
-            ? `/docs/folders/${item.ID}`
-            : `/docs/documents/${item.ID}`;
-        const data = (field === 'title' || field === 'category')
-            ? { [field]: newValue }
-            : { document_type: newValue };
-
+        const endpoint = item.type === 'folder' ? `/docs/folders/${item.ID}` : `/docs/documents/${item.ID}`;
+        const data = { [field]: newValue };
         axios.post(endpoint, data)
             .then(response => {
               console.log('Update successful:', response);
@@ -288,7 +291,6 @@ export default {
               console.error('Update failed:', error);
             });
       }
-
       this.editingId = null;
       this.editingField = null;
     },
@@ -322,6 +324,7 @@ export default {
 
       const parentFolder = this.items.find(item => item.ID === this.currentFolderID && item._ID);
       this.currentFolderID = parentFolder ? parentFolder._ID : null;
+      this.currentFolderName = parentFolder ? parentFolder.title : null;
       this.updateView();
     },
     handleClick(item) {
@@ -658,5 +661,10 @@ input[type="checkbox"] {
 
 .dropdown-menu button:hover {
   background-color: #f1f1f1;
+}
+
+.header-folder-name {
+  font-size: 16px;
+  margin-left: 20px;
 }
 </style>
